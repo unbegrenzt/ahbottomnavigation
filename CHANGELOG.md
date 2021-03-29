@@ -1,6 +1,33 @@
 ## Changelog
 
-### Newest version: 2.1.0
+### Newest version: 2.3.4
+* Fix a bug with the disappearing animation for the notification
+
+### 2.3.3
+* Re-add old notification animation behavior to avoid a bug (from 2.3.0: Badge removal no longer clears text prior to animation)
+
+### 2.3.2
+* Remove notification animation listener to avoid weird behaviors
+
+### 2.3.1
+* Fix animation duration for notification
+
+### 2.3.0
+* Migrate project to AndroidX
+* Update libraries versions
+* Incorporate padding into item width calculation
+* Badge removal no longer clears text prior to animation
+* Fix NPE crash when currentItem was switched programmatically with titleState = TitleState.SHOW_WHEN_ACTIVE_FORCE
+* Update isClassic() in AHBottomNavigation
+* Navigation item layouts for >= SDK 21 now use item_background drawable for background.
+* Only change drawable colour if forceTint is true (default value)
+* Add method `addItemAtIndex(int index, AHBottomNavigationItem item)` (with warning when index is out of bounds)
+
+### 2.2.0
+* Update libraries versions
+* Add another state for titles: `SHOW_WHEN_ACTIVE_FORCE` (PR #313)
+
+### 2.1.0
 
 * Update libraries versions
 * Add enable/disable tab state (with custom color)

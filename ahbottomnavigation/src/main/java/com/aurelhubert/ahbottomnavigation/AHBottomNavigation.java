@@ -12,14 +12,14 @@ import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
-import android.support.annotation.ColorInt;
-import android.support.annotation.ColorRes;
-import android.support.annotation.DrawableRes;
-import android.support.design.widget.CoordinatorLayout;
-import android.support.design.widget.FloatingActionButton;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.view.ViewCompat;
-import android.support.v4.view.animation.LinearOutSlowInInterpolator;
+import androidx.annotation.ColorInt;
+import androidx.annotation.ColorRes;
+import androidx.annotation.DrawableRes;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
+import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -58,6 +58,7 @@ public class AHBottomNavigation extends FrameLayout {
 	// Title state
 	public enum TitleState {
 		SHOW_WHEN_ACTIVE,
+		SHOW_WHEN_ACTIVE_FORCE,
 		ALWAYS_SHOW,
 		ALWAYS_HIDE
 	}
@@ -108,7 +109,7 @@ public class AHBottomNavigation extends FrameLayout {
 	private float titleActiveTextSize, titleInactiveTextSize;
 	private int bottomNavigationHeight, navigationBarHeight = 0;
 	private float selectedItemWidth, notSelectedItemWidth;
-	private boolean forceTint = false;
+	private boolean forceTint = true;
 	private TitleState titleState = TitleState.SHOW_WHEN_ACTIVE;
 
 	// Notifications
@@ -241,8 +242,7 @@ public class AHBottomNavigation extends FrameLayout {
 		notificationAnimationDuration = 150;
 
 		ViewCompat.setElevation(this, resources.getDimension(R.dimen.bottom_navigation_elevation));
-		setClipToPadding(false);
-
+		
 		ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(
 				ViewGroup.LayoutParams.MATCH_PARENT, bottomNavigationHeight);
 		setLayoutParams(params);
@@ -261,6 +261,7 @@ public class AHBottomNavigation extends FrameLayout {
 		int layoutHeight = (int) resources.getDimension(R.dimen.bottom_navigation_height);
 
 		removeAllViews();
+
 		views.clear();
 		backgroundColorView = new View(context);
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -277,8 +278,7 @@ public class AHBottomNavigation extends FrameLayout {
 		LayoutParams layoutParams = new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, layoutHeight);
 		addView(linearLayoutContainer, layoutParams);
 
-		if (titleState != TitleState.ALWAYS_HIDE &&
-				(items.size() == MIN_ITEMS || titleState == TitleState.ALWAYS_SHOW)) {
+		if (isClassic()) {
 			createClassicItems(linearLayoutContainer);
 		} else {
 			createSmallItems(linearLayoutContainer);
@@ -349,7 +349,9 @@ public class AHBottomNavigation extends FrameLayout {
      * @return true if classic (icon + title)
      */
     private boolean isClassic() {
-        return titleState == TitleState.ALWAYS_SHOW || items.size() <= MIN_ITEMS && titleState != TitleState.ALWAYS_SHOW;
+        return titleState != TitleState.ALWAYS_HIDE &&
+				titleState != TitleState.SHOW_WHEN_ACTIVE_FORCE &&
+				(items.size() == MIN_ITEMS || titleState == TitleState.ALWAYS_SHOW);
     }
 
 	/**
@@ -370,7 +372,7 @@ public class AHBottomNavigation extends FrameLayout {
 			maxWidth = resources.getDimension(R.dimen.bottom_navigation_small_inactive_max_width);
 		}
 
-		int layoutWidth = getWidth();
+		int layoutWidth = getWidth() - getPaddingLeft() - getPaddingRight();
 		if (layoutWidth == 0 || items.size() == 0) {
 			return;
 		}
@@ -394,6 +396,7 @@ public class AHBottomNavigation extends FrameLayout {
 			inactiveSize = resources.getDimension(R.dimen.bottom_navigation_text_size_forced_inactive);
 		}
 
+		Drawable iconDrawable;
 		for (int i = 0; i < items.size(); i++) {
 			final boolean current = currentItem == i;
 			final int itemIndex = i;
@@ -455,7 +458,7 @@ public class AHBottomNavigation extends FrameLayout {
 			}
 			
 			title.setTextSize(TypedValue.COMPLEX_UNIT_PX, current ? activeSize : inactiveSize);
-			
+
 			if (itemsEnabledStates[i]) {
 				view.setOnClickListener(new OnClickListener() {
 					@Override
@@ -463,14 +466,19 @@ public class AHBottomNavigation extends FrameLayout {
 						updateItems(itemIndex, true);
 					}
 				});
-				icon.setImageDrawable(AHHelper.getTintDrawable(items.get(i).getDrawable(context),
-						current ? itemActiveColor : itemInactiveColor, forceTint));
+				iconDrawable = forceTint ? AHHelper.getTintDrawable(items.get(i).getDrawable(context),
+						current ? itemActiveColor : itemInactiveColor, forceTint) : items.get(i).getDrawable(context);
+				icon.setImageDrawable(iconDrawable);
 				title.setTextColor(current ? itemActiveColor : itemInactiveColor);
 				view.setSoundEffectsEnabled(soundEffectsEnabled);
+				view.setEnabled(true);
 			} else {
-				icon.setImageDrawable(AHHelper.getTintDrawable(items.get(i).getDrawable(context),
-						itemDisableColor, forceTint));
+				iconDrawable = forceTint ? AHHelper.getTintDrawable(items.get(i).getDrawable(context),
+						itemDisableColor, forceTint) : items.get(i).getDrawable(context);
+				icon.setImageDrawable(iconDrawable);
 				title.setTextColor(itemDisableColor);
+				view.setClickable(true);
+				view.setEnabled(false);
 			}
 
 			LayoutParams params = new LayoutParams((int) itemWidth, (int) height);
@@ -494,7 +502,7 @@ public class AHBottomNavigation extends FrameLayout {
 		float minWidth = resources.getDimension(R.dimen.bottom_navigation_small_inactive_min_width);
 		float maxWidth = resources.getDimension(R.dimen.bottom_navigation_small_inactive_max_width);
 
-		int layoutWidth = getWidth();
+		int layoutWidth = getWidth() - getPaddingLeft() - getPaddingRight();
 		if (layoutWidth == 0 || items.size() == 0) {
 			return;
 		}
@@ -514,7 +522,7 @@ public class AHBottomNavigation extends FrameLayout {
 		itemWidth -= difference;
 		notSelectedItemWidth = itemWidth;
 
-
+		Drawable iconDrawable;
 		for (int i = 0; i < items.size(); i++) {
 
 			final int itemIndex = i;
@@ -580,8 +588,9 @@ public class AHBottomNavigation extends FrameLayout {
 			}
 
 			if (itemsEnabledStates[i]) {
-				icon.setImageDrawable(AHHelper.getTintDrawable(items.get(i).getDrawable(context),
-						currentItem == i ? itemActiveColor : itemInactiveColor, forceTint));
+				iconDrawable = forceTint ? AHHelper.getTintDrawable(items.get(i).getDrawable(context),
+						currentItem == i ? itemActiveColor : itemInactiveColor, forceTint) : items.get(i).getDrawable(context);
+				icon.setImageDrawable(iconDrawable);
 				title.setTextColor(currentItem == i ? itemActiveColor : itemInactiveColor);
 				title.setAlpha(currentItem == i ? 1 : 0);
 				view.setOnClickListener(new OnClickListener() {
@@ -591,11 +600,15 @@ public class AHBottomNavigation extends FrameLayout {
 					}
 				});
 				view.setSoundEffectsEnabled(soundEffectsEnabled);
+				view.setEnabled(true);
 			} else {
-				icon.setImageDrawable(AHHelper.getTintDrawable(items.get(i).getDrawable(context),
-						itemDisableColor, forceTint));
+				iconDrawable = forceTint ? AHHelper.getTintDrawable(items.get(i).getDrawable(context),
+						itemDisableColor, forceTint) : items.get(i).getDrawable(context);
+				icon.setImageDrawable(iconDrawable);
 				title.setTextColor(itemDisableColor);
 				title.setAlpha(0);
+				view.setClickable(true);
+				view.setEnabled(false);
 			}
 			
 			int width = i == currentItem ? (int) selectedItemWidth :
@@ -665,8 +678,10 @@ public class AHBottomNavigation extends FrameLayout {
 				AHHelper.updateLeftMargin(notification, notificationInactiveMarginLeft, notificationActiveMarginLeft);
 				AHHelper.updateTextColor(title, itemInactiveColor, itemActiveColor);
 				AHHelper.updateTextSize(title, inactiveSize, activeSize);
-				AHHelper.updateDrawableColor(context, items.get(itemIndex).getDrawable(context), icon,
-						itemInactiveColor, itemActiveColor, forceTint);
+				if (forceTint) {
+					AHHelper.updateDrawableColor(context, items.get(itemIndex).getDrawable(context), icon,
+							itemInactiveColor, itemActiveColor, forceTint);
+				}
 
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && colored) {
 
@@ -726,8 +741,10 @@ public class AHBottomNavigation extends FrameLayout {
 				AHHelper.updateLeftMargin(notification, notificationActiveMarginLeft, notificationInactiveMarginLeft);
 				AHHelper.updateTextColor(title, itemActiveColor, itemInactiveColor);
 				AHHelper.updateTextSize(title, activeSize, inactiveSize);
-				AHHelper.updateDrawableColor(context, items.get(currentItem).getDrawable(context), icon,
-						itemActiveColor, itemInactiveColor, forceTint);
+				if (forceTint) {
+					AHHelper.updateDrawableColor(context, items.get(currentItem).getDrawable(context), icon,
+							itemActiveColor, itemInactiveColor, forceTint);
+				}
 			}
 		}
 
@@ -792,8 +809,10 @@ public class AHBottomNavigation extends FrameLayout {
 				}
 
 				AHHelper.updateAlpha(title, 0, 1);
-				AHHelper.updateDrawableColor(context, items.get(itemIndex).getDrawable(context), icon,
-						itemInactiveColor, itemActiveColor, forceTint);
+				if (forceTint) {
+					AHHelper.updateDrawableColor(context, items.get(itemIndex).getDrawable(context), icon,
+							itemInactiveColor, itemActiveColor, forceTint);
+				}
 
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && colored) {
 					int finalRadius = Math.max(getWidth(), getHeight());
@@ -859,8 +878,10 @@ public class AHBottomNavigation extends FrameLayout {
 				}
 
 				AHHelper.updateAlpha(title, 1, 0);
-				AHHelper.updateDrawableColor(context, items.get(currentItem).getDrawable(context), icon,
-						itemActiveColor, itemInactiveColor, forceTint);
+				if (forceTint) {
+					AHHelper.updateDrawableColor(context, items.get(currentItem).getDrawable(context), icon,
+							itemActiveColor, itemInactiveColor, forceTint);
+				}
 			}
 		}
 
@@ -896,7 +917,7 @@ public class AHBottomNavigation extends FrameLayout {
 			final int currentTextColor = AHNotificationHelper.getTextColor(notificationItem, notificationTextColor);
 			final int currentBackgroundColor = AHNotificationHelper.getBackgroundColor(notificationItem, notificationBackgroundColor);
 
-			TextView notification = (TextView) views.get(i).findViewById(R.id.bottom_navigation_notification);
+			final TextView notification = (TextView) views.get(i).findViewById(R.id.bottom_navigation_notification);
 
 			String currentValue = notification.getText().toString();
 			boolean animate = !currentValue.equals(String.valueOf(notificationItem.getText()));
@@ -961,6 +982,21 @@ public class AHBottomNavigation extends FrameLayout {
 	////////////
 	// PUBLIC //
 	////////////
+	
+	/**
+	 * Add an item at the given index
+	 */
+	public void addItemAtIndex(int index, AHBottomNavigationItem item) {
+		if (this.items.size() > MAX_ITEMS) {
+			Log.w(TAG, "The items list should not have more than 5 items");
+		}
+		if (index < items.size()) {
+			this.items.add(index, item);
+		} else {
+			Log.w(TAG, "The index is out of bounds (index: " + index + ", size: " + this.items.size() + ")");
+		}
+		createItems();
+	}
 
 	/**
 	 * Add an item
@@ -1203,6 +1239,7 @@ public class AHBottomNavigation extends FrameLayout {
 		}
 
 		if (titleState != TitleState.ALWAYS_HIDE &&
+				titleState != TitleState.SHOW_WHEN_ACTIVE_FORCE &&
 				(items.size() == MIN_ITEMS || titleState == TitleState.ALWAYS_SHOW)) {
 			updateItems(position, useCallback);
 		} else {
